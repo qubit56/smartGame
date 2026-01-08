@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>손 이탈 → 다트 발사 → 꽂히는 순간 멈춤 + 진동</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background:#0b0f14; color:#e7eef8; }
+    .wrap { display: grid; grid-template-columns: 460px 1fr; gap: 16px; padding: 16px; }
+    .card { background:#121926; border:1px solid #223049; border-radius: 14px; padding: 12px; }
+    video { width: 100%; border-radius: 12px; background:#000; transform: scaleX(-1); }
+    canvas#wheel { width: 100%; max-width: 560px; aspect-ratio: 1/1; background:#0e1522; border-radius: 14px; display:block; margin:auto; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
+    button { padding:10px 12px; border-radius: 10px; border:1px solid #2a3a57; background:#1a2740; color:#e7eef8; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .badge { padding:6px 10px; border-radius: 999px; border:1px solid #2a3a57; background:#0f1a2d; }
+    .hint { color:#a9b7d0; font-size: 13px; line-height: 1.4; }
+    .big { font-size: 20px; font-weight: 700; }
+    .ok { color:#7CFFB2; }
+    .warn { color:#FFD37C; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+
+  <!-- MediaPipe Hands -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div class="big">손 이탈 → 다트 → 멈춤(진동)</div>
+        <div id="status" class="badge warn">카메라 대기</div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <video id="video" playsinline></video>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <button id="btnStart">카메라 시작</button>
+        <button id="btnStop" disabled>카메라 중지</button>
+        <button id="btnSpin" disabled>테스트 스핀(무한)</button>
+        <button id="btnReset" disabled>리셋</button>
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        사용법: <b>테스트 스핀(무한)</b>을 눌러 계속 돌리고, 손을 추적시키다가 <b>손을 화면 밖으로 빼면</b> 다트가 날아와 꽂히며 멈춥니다.
+      </div>
+
+      <hr style="border:none;border-top:1px solid #223049;margin:12px 0;" />
+
+      <div class="row" style="justify-content:space-between;">
+        <div class="badge">추적 상태</div>
+        <div class="badge mono" id="track">-</div>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:6px;">
+        <div class="badge">룰렛 상태</div>
+        <div class="badge mono" id="spinState">-</div>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:6px;">
+        <div class="badge">다트 상태</div>
+        <div class="badge mono" id="dartState">-</div>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:6px;">
+        <div class="badge">결과</div>
+        <div class="badge"><span id="result">-</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <canvas id="wheel" width="900" height="900"></canvas>
+      <div class="hint" style="margin-top:10px;text-align:center;">
+        다트가 포인터 아래에 꽂히는 순간 룰렛이 멈추고, 그 순간의 칸이 결과로 확정됩니다.
+      </div>
+    </div>
+  </div>
+
+<script>
+  // =========================================================
+  // 1) 다트 PNG 설정 (원하시는 PNG 링크로 바꾸세요)
+  // =========================================================
+  // 주의: Canvas에 외부 이미지를 그릴 때 CORS가 막히면 이미지가 안 뜰 수 있습니다.
+  // 그 경우 자동으로 "벡터 다트(도형)"로 fallback 됩니다.
+  const DART_PNG_URL =
+    "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3af.png"; 
+  // 위 URL은 "다트판" 이모지 이미지라서 진짜 다트 느낌이 약할 수 있습니다.
+  // 진짜 다트 PNG를 쓰려면 여기에 투명 PNG URL을 넣으세요. (CORS 허용되는 곳 권장)
+
+  const dartImg = new Image();
+  dartImg.crossOrigin = "anonymous";
+  let dartImgReady = false;
+  let dartImgFailed = false;
+
+  dartImg.onload = () => { dartImgReady = true; };
+  dartImg.onerror = () => { dartImgFailed = true; };
+  dartImg.src = DART_PNG_URL;
+
+  // =========================================================
+  // 룰렛 + 다트 + 쉐이크
+  // =========================================================
+  const items = ["제주도","경주","우즈벡","케냐","베트남","부산","케냐","우즈벡","부여","경주","대만","우즈벡","여수","케냐","베트남","영종도","속초","해남"];
+  const wheelCanvas = document.getElementById("wheel");
+  const wctx = wheelCanvas.getContext("2d");
+
+  let angle = 0;                // rad
+  let spinMode = "IDLE";        // IDLE | INFINITE
+  let infiniteVel = 0.20;       // rad/frame 근사
+
+  // 다트 상태
+  let dartMode = "HIDDEN";      // HIDDEN | FLYING | STUCK
+  let dartStartTime = 0;
+  let dartDurationMs = 650;
+  let dartFrom = null;
+  let dartTo = null;
+  let dartTheta = 0;
+
+  // 화면 흔들림(쉐이크)
+  let shakeUntil = 0;
+  let shakeAmp = 0;
+
+  const trackEl = document.getElementById("track");
+  const spinStateEl = document.getElementById("spinState");
+  const dartStateEl = document.getElementById("dartState");
+
+  function setHUD(){
+    trackEl.textContent = wasTracking ? "TRACKING" : "NO HAND";
+    spinStateEl.textContent = spinMode;
+    dartStateEl.textContent = dartMode;
+  }
+
+  function normalizeAngle(a) {
+    a = a % (Math.PI*2);
+    if (a < 0) a += Math.PI*2;
+    return a;
+  }
+
+  function getSelectedIndexAtAngle(a) {
+    const n = items.length;
+    const slice = (Math.PI*2)/n;
+    // 포인터 월드 각 = -PI/2
+    let rel = (-Math.PI/2 - a) % (Math.PI*2);
+    if (rel < 0) rel += Math.PI*2;
+    return Math.floor(rel / slice);
+  }
+
+  function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+  function startInfiniteSpin() {
+    spinMode = "INFINITE";
+    document.getElementById("result").textContent = "-";
+    dartMode = "HIDDEN";
+    setHUD();
+  }
+
+  function resetGame() {
+    spinMode = "IDLE";
+    dartMode = "HIDDEN";
+    angle = normalizeAngle(angle);
+    document.getElementById("result").textContent = "-";
+    setStatus("리셋 완료", true);
+    setTimeout(()=>setStatus("추적 중", true), 700);
+    setHUD();
+  }
+
+  function startShake(ms=260, amp=18) {
+    shakeUntil = performance.now() + ms;
+    shakeAmp = amp;
+  }
+
+  function getShakeOffset() {
+    const now = performance.now();
+    if (now >= shakeUntil) return {x:0, y:0};
+
+    // 남은 시간에 따라 감쇠
+    const t = (shakeUntil - now) / 260;
+    const a = shakeAmp * Math.max(0, t);
+
+    // 프레임마다 랜덤 진동
+    return {
+      x: (Math.random()*2 - 1) * a,
+      y: (Math.random()*2 - 1) * a
+    };
+  }
+
+  function drawWheel() {
+    const cx0 = wheelCanvas.width/2, cy0 = wheelCanvas.height/2;
+    const radius = Math.min(cx0, cy0) * 0.82;
+
+    // 쉐이크 오프셋 적용
+    const sh = getShakeOffset();
+    const cx = cx0 + sh.x;
+    const cy = cy0 + sh.y;
+
+    // 배경
+    wctx.clearRect(0,0,wheelCanvas.width,wheelCanvas.height);
+    wctx.fillStyle = "#0e1522";
+    wctx.fillRect(0,0,wheelCanvas.width,wheelCanvas.height);
+
+    // 룰렛 조각
+    const n = items.length;
+    const slice = (Math.PI*2)/n;
+
+    wctx.save();
+    wctx.translate(cx,cy);
+    wctx.rotate(angle);
+
+    for (let i=0;i<n;i++){
+      const a0=i*slice, a1=a0+slice;
+
+      wctx.beginPath();
+      wctx.moveTo(0,0);
+      wctx.arc(0,0,radius,a0,a1);
+      wctx.closePath();
+
+      wctx.fillStyle = (i%2===0) ? "#203252" : "#172742";
+      wctx.fill();
+
+      wctx.strokeStyle="#2a3a57";
+      wctx.lineWidth=4;
+      wctx.stroke();
+
+      wctx.save();
+      wctx.rotate(a0+slice/2);
+      wctx.textAlign="right";
+      wctx.fillStyle="#e7eef8";
+      wctx.font="bold 40px system-ui";
+      wctx.fillText(items[i], radius-18, 14);
+      wctx.restore();
+    }
+
+    // 중앙 원
+    wctx.beginPath();
+    wctx.arc(0,0,radius*0.18,0,Math.PI*2);
+    wctx.fillStyle="#0f1a2d";
+    wctx.fill();
+    wctx.strokeStyle="#2a3a57";
+    wctx.lineWidth=6;
+    wctx.stroke();
+
+    wctx.restore();
+
+    // 포인터(상단)
+    wctx.save();
+    wctx.translate(cx,cy);
+    wctx.beginPath();
+    wctx.moveTo(0, -radius+15);
+    wctx.lineTo(-28, -radius - 56);
+    wctx.lineTo(28, -radius - 56);
+    wctx.closePath();
+    wctx.fillStyle="#FFD37C";
+    wctx.fill();
+    wctx.strokeStyle="#2a3a57";
+    wctx.lineWidth=6;
+    wctx.stroke();
+    wctx.restore();
+
+    // 다트
+    drawDart(cx, cy, radius);
+  }
+
+  function drawDart(cx, cy, radius) {
+    if (dartMode === "HIDDEN") return;
+
+    const now = performance.now();
+    let t = 1;
+
+    if (dartMode === "FLYING") {
+      t = (now - dartStartTime) / dartDurationMs;
+      if (t >= 1) {
+        t = 1;
+        dartMode = "STUCK";
+        onDartHit(); // <<< 다트 꽂히는 순간 이벤트
+      }
+    }
+
+    const tt = easeOutCubic(Math.min(1, t));
+    const x = dartFrom.x + (dartTo.x - dartFrom.x) * tt;
+    const y = dartFrom.y + (dartTo.y - dartFrom.y) * tt;
+
+    wctx.save();
+    wctx.translate(x, y);
+    wctx.rotate(dartTheta);
+
+    if (dartImgReady && !dartImgFailed) {
+      // PNG 다트 이미지 (크기 조절)
+      const w = 160, h = 160;
+      wctx.drawImage(dartImg, -w*0.55, -h*0.55, w, h);
+    } else {
+      // fallback: 벡터 다트(도형)
+      wctx.fillStyle = "#e7eef8";
+      wctx.strokeStyle = "#2a3a57";
+      wctx.lineWidth = 5;
+
+      wctx.beginPath();
+      wctx.roundRect(-70, -10, 110, 20, 10);
+      wctx.fill(); wctx.stroke();
+
+      wctx.fillStyle = "#FFD37C";
+      wctx.beginPath();
+      wctx.moveTo(40, 0);
+      wctx.lineTo(78, -12);
+      wctx.lineTo(78, 12);
+      wctx.closePath();
+      wctx.fill(); wctx.stroke();
+
+      wctx.fillStyle = "#7CFFB2";
+      wctx.beginPath();
+      wctx.moveTo(-70, 0);
+      wctx.lineTo(-100, -18);
+      wctx.lineTo(-100, 18);
+      wctx.closePath();
+      wctx.fill(); wctx.stroke();
+    }
+
+    wctx.restore();
+  }
+
+  // roundRect 폴리필
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      const rr = Math.min(r, w/2, h/2);
+      this.beginPath();
+      this.moveTo(x+rr, y);
+      this.arcTo(x+w, y, x+w, y+h, rr);
+      this.arcTo(x+w, y+h, x, y+h, rr);
+      this.arcTo(x, y+h, x, y, rr);
+      this.arcTo(x, y, x+w, y, rr);
+      this.closePath();
+      return this;
+    }
+  }
+
+  function tick() {
+    // 무한 회전은 다트가 날아오는 동안에도 계속 유지
+    if (spinMode === "INFINITE" && dartMode !== "STUCK") {
+      angle += infiniteVel;
+    }
+    drawWheel();
+    setHUD();
+    requestAnimationFrame(tick);
+  }
+  drawWheel();
+  requestAnimationFrame(tick);
+
+  // =========================================================
+  // 2) 다트 이벤트: "손이 화면 밖으로 나가면" 발사
+  // =========================================================
+  function fireDart() {
+    if (spinMode !== "INFINITE") return;
+    if (dartMode !== "HIDDEN") return;
+
+    const cx = wheelCanvas.width/2, cy = wheelCanvas.height/2;
+    const radius = Math.min(cx, cy) * 0.82;
+
+    dartMode = "FLYING";
+    dartStartTime = performance.now();
+
+    // 시작점(화면 밖) → 포인터 아래(상단)
+    dartFrom = { x: cx + radius + 260, y: cy + radius + 220 };
+    dartTo   = { x: cx, y: cy - radius + 52 };
+
+    // 진행 방향 각도
+    dartTheta = Math.atan2(dartTo.y - dartFrom.y, dartTo.x - dartFrom.x);
+
+    // 소리: 날아오는 소리
+    playWhoosh(dartDurationMs);
+
+    setStatus("손 이탈 감지 → 다트 발사!", true);
+  }
+
+  // 다트가 "꽂히는 순간" 처리: 여기서 멈추고 결과 확정 + 진동 + 히트 사운드
+  function onDartHit() {
+    // 이미 멈췄으면 무시
+    if (spinMode !== "INFINITE") return;
+
+    // 1) 룰렛 즉시 멈춤 (꽂히는 순간 기준)
+    spinMode = "IDLE";
+
+    // 2) 결과 = 꽂히는 순간 angle로 계산
+    const idx = getSelectedIndexAtAngle(angle);
+    document.getElementById("result").textContent = items[idx];
+
+    // 3) 히트 사운드 + 화면 흔들림
+    playHit();
+    startShake(260, 18);
+
+    setStatus("다트 꽂힘! 멈춤 + 결과 확정", true);
+    setTimeout(()=>setStatus("추적 중", true), 900);
+  }
+
+  // =========================================================
+  // 3) 사운드(웹오디오): whoosh + hit
+  // =========================================================
+  let audioCtx = null;
+
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  }
+
+  function playWhoosh(durationMs=650) {
+    ensureAudio();
+    const t0 = audioCtx.currentTime;
+
+    const bufferSize = audioCtx.sampleRate * 1.0;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2 - 1) * 0.6;
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const bandpass = audioCtx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.setValueAtTime(900, t0);
+    bandpass.frequency.exponentialRampToValueAtTime(2600, t0 + durationMs/1000);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.32, t0 + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + durationMs/1000);
+
+    noise.connect(bandpass).connect(gain).connect(audioCtx.destination);
+    noise.start(t0);
+    noise.stop(t0 + durationMs/1000);
+  }
+
+  function playHit() {
+    ensureAudio();
+    const t0 = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(230, t0);
+    osc.frequency.exponentialRampToValueAtTime(95, t0 + 0.08);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.36, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.14);
+
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<data.length;i++) data[i] = (Math.random()*2 - 1) * (1 - i/data.length);
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const ng = audioCtx.createGain();
+    ng.gain.setValueAtTime(0.25, t0);
+    ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+    noise.connect(ng).connect(audioCtx.destination);
+    noise.start(t0);
+    noise.stop(t0 + 0.06);
+  }
+
+  // =========================================================
+  // 카메라/손 추적: "추적 중이었다가 손이 사라지면 fireDart()"
+  // =========================================================
+  const video = document.getElementById("video");
+  const statusEl = document.getElementById("status");
+  let camera=null, hands=null;
+
+  let wasTracking = false;           // 직전 프레임까지 손이 있었나
+  let handLostCooldownUntil = 0;     // 손이 살짝 끊기는 오발동 방지
+
+  function setStatus(text, ok=false) {
+    statusEl.textContent = text;
+    statusEl.className = "badge " + (ok ? "ok" : "warn");
+  }
+
+  function onHandPresent() {
+    wasTracking = true;
+  }
+
+  function onHandLost() {
+    const now = performance.now();
+
+    // 1) 손이 원래 없던 상태면 무시
+    if (!wasTracking) return;
+
+    // 2) 너무 자주 발사 방지(짧은 끊김)
+    if (now < handLostCooldownUntil) return;
+
+    // 3) 쿨다운 설정
+    handLostCooldownUntil = now + 900; // 0.9초 동안 재발사 금지
+
+    // 4) 손 이탈 이벤트 → 다트 발사
+    fireDart();
+
+    // 손은 이제 없는 상태로 간주
+    wasTracking = false;
+  }
+
+  async function startCamera() {
+    setStatus("카메라 켜는 중…", false);
+
+    hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6
+    });
+
+    hands.onResults((results) => {
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        setStatus("추적 중", true);
+        onHandPresent();
+      } else {
+        setStatus("손을 화면에 보여주세요", false);
+        onHandLost();
+      }
+    });
+
+    camera = new Camera(video, {
+      onFrame: async () => { await hands.send({ image: video }); },
+      width: 640,
+      height: 480
+    });
+
+    await camera.start();
+
+    document.getElementById("btnStart").disabled = true;
+    document.getElementById("btnStop").disabled = false;
+    document.getElementById("btnSpin").disabled = false;
+    document.getElementById("btnReset").disabled = false;
+
+    setStatus("추적 중", true);
+    setHUD();
+  }
+
+  async function stopCamera() {
+    try {
+      if (camera) { camera.stop(); camera = null; }
+      if (video && video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+      }
+    } catch(e) {}
+
+    document.getElementById("btnStart").disabled = false;
+    document.getElementById("btnStop").disabled = true;
+    document.getElementById("btnSpin").disabled = true;
+    document.getElementById("btnReset").disabled = true;
+
+    setStatus("카메라 중지", false);
+    wasTracking = false;
+    resetGame();
+  }
+
+  document.getElementById("btnStart").addEventListener("click", startCamera);
+  document.getElementById("btnStop").addEventListener("click", stopCamera);
+
+  // 테스트 스핀 버튼: 무한 회전 시작 + 오디오 활성화(브라우저 정책)
+  document.getElementById("btnSpin").addEventListener("click", () => {
+    ensureAudio();
+    setStatus("무한 회전 시작! 손을 화면 밖으로 빼면 다트가 날아옵니다.", true);
+    startInfiniteSpin();
+  });
+
+  document.getElementById("btnReset").addEventListener("click", resetGame);
+
+  // 최초 HUD
+  setHUD();
+</script>
+</body>
+</html>
