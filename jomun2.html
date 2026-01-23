@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>조문별 인권행동강령</title>
+
+  <style>
+    :root{
+      /* 밝은 톤 */
+      --bg1:#f7fbff;
+      --bg2:#ffffff;
+      --card:#ffffff;
+      --card2:#f4f7ff;
+      --text:#1b2a4a;
+      --muted:#5c6b8a;
+      --line:#dfe7ff;
+      --accent:#2f6bff;
+      --accent2:#14b8a6;
+      --shadow: 0 10px 25px rgba(27,42,74,.08);
+      --radius:16px;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 420px at 10% 10%, rgba(47,107,255,.12), transparent 60%),
+        radial-gradient(900px 420px at 90% 0%, rgba(20,184,166,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .headerWrap{
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 16px 12px;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .brand{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: -.2px;
+    }
+    .brand p{
+      margin:0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .topControls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    input[type="search"]{
+      width: 270px;
+      max-width: 72vw;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--text);
+      outline:none;
+      box-shadow: 0 2px 10px rgba(27,42,74,.04);
+    }
+    input[type="search"]:focus{
+      border-color: rgba(47,107,255,.45);
+      box-shadow: 0 0 0 4px rgba(47,107,255,.10);
+    }
+    button{
+      border:1px solid var(--line);
+      background: #fff;
+      color:var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(27,42,74,.04);
+      transition: .15s transform, .15s box-shadow;
+      user-select:none;
+    }
+    button:hover{ transform: translateY(-1px); box-shadow: 0 10px 18px rgba(27,42,74,.08); }
+    button.primary{
+      background: linear-gradient(135deg, rgba(47,107,255,.12), rgba(20,184,166,.10));
+      border-color: rgba(47,107,255,.25);
+    }
+
+    /* 레이아웃: 모바일 우선 */
+    .wrap{
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 16px 22px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    /* 데스크톱/태블릿: 좌(목록) 우(상세) */
+    @media (min-width: 900px){
+      .wrap{ grid-template-columns: 1.05fr .95fr; }
+    }
+
+    .panel{
+      background: var(--card);
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panelHead{
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background: linear-gradient(180deg, var(--card), var(--card2));
+    }
+    .panelHead .title{
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .panelHead .sub{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height:1.35;
+    }
+    .panelHead .left{
+      display:flex; flex-direction:column;
+    }
+
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding: 12px;
+      max-height: calc(100vh - 220px);
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* 모바일에서는 목록이 너무 길면 보기 힘드니 높이 제한 조금 줄임 */
+    @media (max-width: 899px){
+      .list{ max-height: 42vh; }
+    }
+
+    .qcard{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius: 14px;
+      padding: 12px;
+      display:flex;
+      gap:10px;
+      cursor:pointer;
+      transition: .15s transform, .15s box-shadow, .15s border-color;
+    }
+    .qcard:hover{ transform: translateY(-1px); box-shadow: 0 10px 16px rgba(27,42,74,.08); }
+    .qcard.active{
+      border-color: rgba(47,107,255,.45);
+      box-shadow: 0 0 0 4px rgba(47,107,255,.10);
+      background: linear-gradient(135deg, rgba(47,107,255,.06), rgba(20,184,166,.05));
+    }
+
+    .badge{
+      min-width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display:grid;
+      place-items:center;
+      font-weight: 900;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 8px 16px rgba(47,107,255,.18);
+    }
+    .meta{ display:flex; flex-direction:column; gap:6px; width:100%; }
+    .q{ font-weight: 900; line-height: 1.35; }
+    .tagline{ color: var(--muted); font-size: 12.8px; line-height: 1.35; }
+
+    .pills{ display:flex; gap:8px; flex-wrap:wrap; margin-top:2px; }
+    .pill{
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      color: var(--muted);
+      background:#fff;
+    }
+    .pill.accent{
+      color: var(--accent);
+      border-color: rgba(47,107,255,.25);
+      background: rgba(47,107,255,.06);
+      font-weight: 800;
+    }
+
+    /* 상세 */
+    .detail{
+      padding: 14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height: 520px;
+    }
+    @media (max-width: 899px){
+      .detail{ min-height: 0; }
+    }
+
+    .hint{
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.45;
+      background: rgba(20,184,166,.08);
+      border:1px solid rgba(20,184,166,.20);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    code.small{
+      font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      font-size: 12px;
+      background: rgba(47,107,255,.08);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(47,107,255,.16);
+    }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 86px 1fr;
+      gap:8px 10px;
+      padding: 12px;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .k{ color: var(--muted); font-size: 12.5px; padding-top:2px; }
+    .v{ font-weight: 850; line-height: 1.4; }
+
+    .tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .tab{
+      padding: 9px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      cursor:pointer;
+      font-weight: 850;
+      user-select:none;
+      transition: .12s transform;
+    }
+    .tab:hover{ transform: translateY(-1px); }
+    .tab.active{
+      color:#fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 10px 16px rgba(47,107,255,.18);
+    }
+
+    .contentBox{
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background:#fff;
+      padding: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      min-height: 220px;
+    }
+
+    .row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .row button{ flex: 1; }
+
+    .navBtns{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    footer{
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 16px 22px;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+    footer ul{ margin: 8px 0 0; padding-left: 18px; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="headerWrap">
+    <div class="brand">
+      <h1>조문별 인권행동강령</h1>
+      <p>질문을 선택하면, 조문·조문내용(요약)·조문해설이 바로 나옵니다. (스마트폰/PC 반응형)</p>
+    </div>
+
+    <div class="topControls">
+      <input id="search" type="search" placeholder="검색: 절차, 차별, 개인정보..." />
+      <button id="reset" title="검색/선택 초기화">초기화</button>
+      <button id="toDetail" class="primary" title="모바일에서 상세로 이동">상세 보기</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Left: Questions -->
+  <section class="panel" aria-label="질문 목록" id="panelList">
+    <div class="panelHead">
+      <div class="left">
+        <div class="title">질문(상황 유도)</div>
+        <div class="sub">원하시는 항목을 누르면 오른쪽에 조문 카드가 표시됩니다.</div>
+      </div>
+      <div class="navBtns">
+        <button id="prev" title="이전">이전</button>
+        <button id="next" title="다음">다음</button>
+      </div>
+    </div>
+    <div id="list" class="list"></div>
+  </section>
+
+  <!-- Right: Detail -->
+  <section class="panel" aria-label="조문 상세" id="panelDetail">
+    <div class="panelHead">
+      <div class="left">
+        <div class="title">조문 카드</div>
+        <div class="sub">조문(제목) · 조문내용(요약) · 조문해설(교육용)</div>
+      </div>
+      <div class="navBtns">
+        <button id="toList" title="모바일에서 목록으로 이동">목록 보기</button>
+      </div>
+    </div>
+
+    <div class="detail">
+      <div class="hint">
+        실제 법령 조문을 넣고 싶으시면 데이터의 <code class="small">lawText</code>에 원문을 붙여 넣으시면 됩니다.
+        지금은 “교육용 요약” 형태로 들어가 있습니다.
+      </div>
+
+      <div class="kv">
+        <div class="k">질문</div><div class="v" id="dQuestion">왼쪽에서 항목을 선택해 주세요.</div>
+        <div class="k">답변문구</div><div class="v" id="dTagline">—</div>
+        <div class="k">조문</div><div class="v" id="dArticle">—</div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="조문 탭">
+        <div class="tab active" role="tab" aria-selected="true" data-tab="summary">조문내용(요약)</div>
+        <div class="tab" role="tab" aria-selected="false" data-tab="explain">조문해설</div>
+        <div class="tab" role="tab" aria-selected="false" data-tab="law">조문(원문)</div>
+      </div>
+
+      <div class="contentBox" id="content"></div>
+
+      <div class="row">
+        <button id="copy" class="primary">현재 내용 복사</button>
+        <button id="copyAll">카드 전체 복사</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div><strong>수정 포인트</strong></div>
+  <ul>
+    <li><code class="small">DATA</code> 배열만 고치면 질문/조문/요약/해설이 자동 반영됩니다.</li>
+    <li>교육용으로는 요약은 3줄, 해설은 2~4문장 정도가 전달력이 좋습니다.</li>
+  </ul>
+</footer>
+
+<script>
+  // ✅ 데이터만 수정하면 됩니다.
+  const DATA = [
+    {
+      id: 1,
+      question: "지금 이 순간, 사람을 먼저 떠올리고 있을까요?",
+      tagline: "인권은 결과가 아니라 판단의 기본과 원칙입니다.",
+      article: "인권보호의 원칙",
+      summary: "• 사람의 안전·존엄을 최우선으로 둡니다.\n• 효율보다 인권 침해 방지를 먼저 확인합니다.\n• 의심/혐의와 무관하게 기본권을 존중합니다.",
+      explain: "현장에서는 속도·성과가 앞서기 쉽습니다. 어떤 조치든 ‘불필요한 피해가 없는가’를 먼저 점검하는 습관이 핵심입니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 2,
+      question: "잠깐 돌아가도 지금 이 절차가 나를 지켜주지 않을까요?",
+      tagline: "‘절차’를 건너뛸 때 가장 먼저 사라지는 것은 ‘신뢰’입니다.",
+      article: "적법절차 준수",
+      summary: "• 권한 행사에는 법적 근거와 절차가 필요합니다.\n• 고지/기록/승인 등 필수 절차를 생략하지 않습니다.\n• 절차 준수는 조직과 개인을 함께 보호합니다.",
+      explain: "절차는 ‘형식’이 아니라 ‘정당성’입니다. 기록과 근거가 남으면 사후 분쟁에서도 안전해집니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 3,
+      question: "오늘 현장에서 조금 덜 해도 괜찮았던 순간은 없었을까요?",
+      tagline: "할 수 있었지만 하지 않기로 한 선택도 전문성입니다.",
+      article: "비례의 원칙",
+      summary: "• 목적 달성에 필요한 최소한의 조치만 합니다.\n• 과도한 수단(힘/통제)은 금지됩니다.\n• 더 완화된 대안이 있으면 우선 검토합니다.",
+      explain: "‘가능한 것’과 ‘해야 하는 것’은 다릅니다. 가장 약한 수단으로 목적이 달성되면 그게 기준입니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 4,
+      question: "지금의 침묵이 편해서가 아니라 옳아서일까요?",
+      tagline: "조직에 대한 불복이 아니라 인권에 대한 충성입니다.",
+      article: "부당지시 거부 및 불이익 금지",
+      summary: "• 위법·부당한 지시는 거부할 수 있습니다.\n• 거부로 인한 불이익을 주어서는 안 됩니다.\n• 보고·기록 등 공식 절차를 활용합니다.",
+      explain: "부당지시에 따르는 순간 책임이 사라지지 않습니다. ‘거부 + 근거 기록 + 보고’가 가장 안전합니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 5,
+      question: "지금 판단, 조금만 더 기다려도 괜찮지 않을까요?",
+      tagline: "피의자를 봐주는 게 아니라 판단을 서두르지 않는 기준입니다.",
+      article: "무죄추정 및 가혹행위 금지",
+      summary: "• 확정 전에는 무죄로 추정합니다.\n• 강압·모욕·위협 등 가혹행위를 금지합니다.\n• 자백 중심이 아니라 증거 중심으로 판단합니다.",
+      explain: "서두른 결론은 오판과 침해로 이어집니다. ‘증거 충분성’과 ‘과정 정당성’을 분리해 점검합니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 6,
+      question: "이 사람에게는 지금 어떤 도움이 필요할까요?",
+      tagline: "똑같이 대하는 게 아니라 공정하게 대하는 게 기준입니다.",
+      article: "차별금지 및 약자·소수자 보호",
+      summary: "• 성별/나이/장애/국적 등으로 차별하지 않습니다.\n• 필요한 편의(의사소통·접근성)를 제공합니다.\n• 편견을 사실로 착각하지 않도록 점검합니다.",
+      explain: "공정은 ‘동일 대우’가 아니라 ‘필요에 맞는 대우’입니다. 접근성과 의사소통을 먼저 고려합니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 7,
+      question: "이 정보가 지금 꼭 필요한 만큼일까요?",
+      tagline: "정보는 많을수록 좋은 게 아니라, 필요한 만큼만 안전합니다.",
+      article: "개인정보 및 사생활 보호",
+      summary: "• 목적에 필요한 최소 정보만 수집합니다.\n• 보관·전달·열람 권한을 통제합니다.\n• 불필요한 공유/유출을 예방합니다.",
+      explain: "‘혹시 몰라서’가 가장 위험합니다. 목적-필요성-보관기간-접근권한을 짧게라도 확인하면 사고가 줄어듭니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 8,
+      question: "지금 이 선택이 회복에 가까운 방향일까요?",
+      tagline: "피해자 보호는 효율보다 사람의 회복을 우선합니다.",
+      article: "범죄피해자 보호",
+      summary: "• 2차 피해(노출/비난/반복 진술)를 줄입니다.\n• 안전 확보와 지원 연계를 우선 고려합니다.\n• 진행 과정에서 존중과 배려를 유지합니다.",
+      explain: "피해자는 ‘과정’에서 다시 상처받기 쉽습니다. 노출 최소화·진술 부담 최소화·안전 확보가 핵심입니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 9,
+      question: "지금 내가 조금만 움직이면 달라질 수 있는 건 없을까요?",
+      tagline: "역할은 기다리는 게 아니라 위험을 막는 것입니다.",
+      article: "위험 발생의 방지 및 조치",
+      summary: "• 위험 징후를 조기에 발견하고 예방 조치를 합니다.\n• 필요 시 즉시 분리·통제·지원 요청을 합니다.\n• 사후가 아니라 사전 예방이 우선입니다.",
+      explain: "작은 행동(분리, 안내, 지원요청)이 큰 피해를 막습니다. ‘사고 전 차단’이 목표입니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    },
+    {
+      id: 10,
+      question: "오늘 현장에서 잠깐 멈춰 생각했던 순간이 있었나요?",
+      tagline: "인권은 정답을 고르는 능력이 아니라 선택을 지키는 힘입니다.",
+      article: "인권교육",
+      summary: "• 인권 감수성을 반복 학습으로 훈련합니다.\n• 현장 사례로 판단 기준을 업데이트합니다.\n• 실수·오해를 줄이는 공통 언어를 만듭니다.",
+      explain: "교육의 목적은 암기가 아니라 ‘현장에서 멈출 수 있는 습관’입니다. 질문 한 번이 침해를 예방합니다.",
+      lawText: "[여기에 실제 조문 원문을 붙여 넣으세요]"
+    }
+  ];
+
+  let filtered = [...DATA];
+  let currentIndex = -1;
+  let currentTab = "summary";
+
+  const $list = document.getElementById("list");
+  const $search = document.getElementById("search");
+  const $reset = document.getElementById("reset");
+  const $prev = document.getElementById("prev");
+  const $next = document.getElementById("next");
+
+  const $dQuestion = document.getElementById("dQuestion");
+  const $dTagline = document.getElementById("dTagline");
+  const $dArticle = document.getElementById("dArticle");
+  const $content = document.getElementById("content");
+
+  const $tabs = Array.from(document.querySelectorAll(".tab"));
+  const $copy = document.getElementById("copy");
+  const $copyAll = document.getElementById("copyAll");
+
+  const $panelList = document.getElementById("panelList");
+  const $panelDetail = document.getElementById("panelDetail");
+  const $toDetail = document.getElementById("toDetail");
+  const $toList = document.getElementById("toList");
+
+  function renderList(){
+    $list.innerHTML = "";
+    filtered.forEach((item, idx) => {
+      const card = document.createElement("div");
+      card.className = "qcard";
+      card.dataset.index = idx;
+
+      const badge = document.createElement("div");
+      badge.className = "badge";
+      badge.textContent = item.id;
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const q = document.createElement("div");
+      q.className = "q";
+      q.textContent = item.question;
+
+      const tagline = document.createElement("div");
+      tagline.className = "tagline";
+      tagline.textContent = item.tagline;
+
+      const pills = document.createElement("div");
+      pills.className = "pills";
+
+      const p1 = document.createElement("span");
+      p1.className = "pill";
+      p1.textContent = "조문";
+
+      const p2 = document.createElement("span");
+      p2.className = "pill accent";
+      p2.textContent = item.article;
+
+      pills.appendChild(p1);
+      pills.appendChild(p2);
+
+      meta.appendChild(q);
+      meta.appendChild(tagline);
+      meta.appendChild(pills);
+
+      card.appendChild(badge);
+      card.appendChild(meta);
+
+      card.addEventListener("click", () => {
+        selectIndex(idx);
+        // 모바일에서는 클릭 시 상세가 바로 보이게
+        if(window.matchMedia("(max-width: 899px)").matches){
+          $panelDetail.scrollIntoView({behavior:"smooth", block:"start"});
+        }
+      });
+
+      $list.appendChild(card);
+    });
+
+    highlightActive();
+  }
+
+  function highlightActive(){
+    const cards = Array.from(document.querySelectorAll(".qcard"));
+    cards.forEach(c => c.classList.remove("active"));
+    if(currentIndex >= 0){
+      const active = cards.find(c => Number(c.dataset.index) === currentIndex);
+      if(active) active.classList.add("active");
+    }
+  }
+
+  function setTab(tab){
+    currentTab = tab;
+    $tabs.forEach(t => {
+      const isActive = t.dataset.tab === tab;
+      t.classList.toggle("active", isActive);
+      t.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+    renderDetail();
+  }
+
+  function selectIndex(idx){
+    currentIndex = idx;
+    highlightActive();
+    setTab("summary"); // 기본 탭
+    const active = document.querySelector(`.qcard[data-index="${idx}"]`);
+    if(active) active.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+
+  function renderDetail(){
+    if(currentIndex < 0 || !filtered[currentIndex]){
+      $dQuestion.textContent = "왼쪽에서 항목을 선택해 주세요.";
+      $dTagline.textContent = "—";
+      $dArticle.textContent = "—";
+      $content.textContent = "";
+      return;
+    }
+    const item = filtered[currentIndex];
+    $dQuestion.textContent = item.question;
+    $dTagline.textContent = item.tagline;
+    $dArticle.textContent = item.article;
+
+    if(currentTab === "summary") $content.textContent = item.summary;
+    else if(currentTab === "explain") $content.textContent = item.explain;
+    else $content.textContent = item.lawText || "[원문 조문이 비어 있습니다. DATA의 lawText를 채워 주세요.]";
+  }
+
+  function applySearch(){
+    const q = ($search.value || "").trim().toLowerCase();
+    const selectedId = (currentIndex >= 0 && filtered[currentIndex]) ? filtered[currentIndex].id : null;
+
+    if(!q) filtered = [...DATA];
+    else{
+      filtered = DATA.filter(x =>
+        [x.question, x.tagline, x.article, x.summary, x.explain, x.lawText]
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+
+    // 선택 유지 (가능하면)
+    if(selectedId != null){
+      const newIdx = filtered.findIndex(x => x.id === selectedId);
+      currentIndex = newIdx; // 없으면 -1
+    }else{
+      currentIndex = -1;
+    }
+
+    renderList();
+    renderDetail();
+  }
+
+  function clampIndex(i){
+    if(filtered.length === 0) return -1;
+    if(i < 0) return 0;
+    if(i >= filtered.length) return filtered.length - 1;
+    return i;
+  }
+
+  $tabs.forEach(t => t.addEventListener("click", () => setTab(t.dataset.tab)));
+  $search.addEventListener("input", applySearch);
+
+  $reset.addEventListener("click", () => {
+    $search.value = "";
+    filtered = [...DATA];
+    currentIndex = -1;
+    setTab("summary");
+    renderList();
+    renderDetail();
+  });
+
+  $prev.addEventListener("click", () => {
+    if(filtered.length === 0) return;
+    if(currentIndex < 0) selectIndex(0);
+    else selectIndex(clampIndex(currentIndex - 1));
+  });
+
+  $next.addEventListener("click", () => {
+    if(filtered.length === 0) return;
+    if(currentIndex < 0) selectIndex(0);
+    else selectIndex(clampIndex(currentIndex + 1));
+  });
+
+  // 모바일에서 "상세 보기/목록 보기" 버튼 제공(스크롤 이동)
+  $toDetail.addEventListener("click", () => {
+    $panelDetail.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  $toList.addEventListener("click", () => {
+    $panelList.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      alert("복사했습니다.");
+    }catch(e){
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      alert("복사했습니다.");
+    }
+  }
+
+  $copy.addEventListener("click", () => {
+    if(currentIndex < 0) return;
+    copyText($content.textContent);
+  });
+
+  $copyAll.addEventListener("click", () => {
+    if(currentIndex < 0) return;
+    const item = filtered[currentIndex];
+    const bundle =
+`[질문]
+${item.question}
+
+[공감/답변문구]
+${item.tagline}
+
+[조문]
+${item.article}
+
+[조문내용(요약)]
+${item.summary}
+
+[조문해설]
+${item.explain}
+
+[조문(원문)]
+${item.lawText || ""}`.trim();
+    copyText(bundle);
+  });
+
+  // 초기 렌더
+  renderList();
+  renderDetail();
+</script>
+</body>
+</html>
